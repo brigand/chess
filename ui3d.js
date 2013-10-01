@@ -8,7 +8,7 @@ ui.appendChild(renderer.domElement);
 
 var loader = new THREE.JSONLoader();
 
-var meshes = [{}, {}, {}, {}, {}, {}, {}, {}];
+var meshes = MakeMeshArray(6);
 
 function loadMeshes(){
 	
@@ -31,17 +31,25 @@ function loadMesh(path, index){
 	loader.load(path, function(geometry){
 		meshes[index].piece = geometry;
 		meshes[index].loaded = true;
- 	    }
-	);
+        meshes[index].callbacks.do(path, index);
+ 	});
 }
 loadMeshes();
 
 function makePiece(index, material, coords){
-	while(meshes[index] != undefined && !meshes[index].loaded) alert("pim");
-	var mesh = new THREE.Mesh(meshes[index].piece, material);
-	mesh.position = coords;
-	scene.add(mesh);
-	return mesh;
+    var addMesh = function (){
+        var mesh = new THREE.Mesh(meshes[index].piece, material);
+        mesh.position = coords;
+        scene.add(mesh);
+        return mesh;
+    };
+
+    if (meshes[index].loaded) {
+        addMesh();
+    }
+    else {
+        meshes[index].callbacks.push(addMesh);
+    }
 }
 
 var light = new THREE.PointLight( 0xffffff, 1, 100 ); light.position.set( 5, 5, 5 ); scene.add( light );
@@ -51,3 +59,25 @@ var render = function () {
 	renderer.render(scene, camera);
 };
 render();
+
+function initUI(){}
+
+function MakeMeshArray(count) {
+    var array = Array(count);
+    for (var i=0; i<array.length; i++) {
+        array[i] = {
+            callbacks: MakeCallbackArray()
+        }
+    }
+    return array;
+}
+
+function MakeCallbackArray() {
+    var callbacks = [];
+    callbacks.do = function(){
+        for (var i=0; i<callbacks.length; i++) {
+            callbacks[i].apply(null, arguments);
+        }
+    };
+    return callbacks;
+}
